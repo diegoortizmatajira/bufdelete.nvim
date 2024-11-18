@@ -10,10 +10,14 @@ end
 
 local M = {
 	current_config = {
+		debug = false,
 		close_with_their_window = {
-			"NvimTree",
-			"nofile",
-			"help",
+			{ filetype = "NvimTree" },
+			{ filetype = "neotest-summary" },
+			{ filetype = "fugitive" },
+			{ filename = "fugitive:" },
+			{ filetype = "gitcommit" },
+			{ filetype = "help" },
 		},
 	},
 }
@@ -47,9 +51,31 @@ end
 
 -- This checks whether the current buffer window should be preserved after this buffer is destroyed.
 local function window_should_be_preserved(buffer_number)
+	local filename = vim.api.nvim_buf_get_name(buffer_number)
 	local buf_type = bo[buffer_number].buftype
-	for _, ft in ipairs(M.current_config.close_with_their_window) do
-		if ft == buf_type then
+	local file_type = bo[buffer_number].filetype
+	if M.current_config.debug then
+		print(
+			"Closing buffer with type "
+				.. (buf_type or "missing")
+				.. " and filetype "
+				.. (file_type or "missing")
+				.. " and filename "
+				.. filename
+		)
+	end
+	for _, item in ipairs(M.current_config.close_with_their_window) do
+		local match_item = vim.tbl_deep_extend("force", {
+			filetype = file_type,
+			buftype = buf_type,
+			filename = filename,
+		}, item)
+		--Checks for buffertype, filetype and filename
+		if
+			(match_item.filetype == file_type)
+			and (match_item.buftype == buf_type)
+			and (filename:sub(1, #match_item.filename) == match_item.filename)
+		then
 			return false
 		end
 	end
